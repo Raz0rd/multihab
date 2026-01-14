@@ -23,6 +23,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
+.env*
 .env*.local
 
 # vercel
@@ -30,6 +32,11 @@ yarn-error.log*
 
 # netlify
 .netlify
+netlify.toml
+
+# docs e scripts
+*.md
+*.bat
 
 # typescript
 *.tsbuildinfo
