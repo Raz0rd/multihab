@@ -2,11 +2,14 @@
 const nextConfig = {
   // Otimização de imagens
   images: {
-    domains: ['localhost', 'api.qrserver.com'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'api.qrserver.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
       },
     ],
   },
