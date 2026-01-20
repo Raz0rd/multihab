@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
-export default function Preland1() {
+export default function LayoutA() {
   return (
     <div className="min-h-screen bg-white">
       <Header />

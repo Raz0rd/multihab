@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { FaEllipsisV, FaCookieBite, FaTh, FaUser, FaBars, FaSearch, FaHome, FaChevronRight, FaFacebookF, FaTwitter, FaLinkedinIn, FaWhatsapp, FaLink, FaDice, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 
-export default function Preland2() {
+export default function LayoutB() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();

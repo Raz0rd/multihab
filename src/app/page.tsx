@@ -1,24 +1,54 @@
 import { Suspense } from 'react';
+import { headers } from 'next/headers';
+import { promises as fs } from 'fs';
+import path from 'path';
 import CloakerGate from '@/components/CloakerGate';
-import Preland1 from '@/components/Preland1';
-import Preland2 from '@/components/Preland2';
+import LayoutA from '@/components/LayoutA';
+import LayoutB from '@/components/LayoutB';
+import LayoutC from '@/components/LayoutC';
 
-export default function Home() {
-  const prelandType = process.env.NEXT_PUBLIC_PRELAND || 'preland1';
+async function getTenantLayout() {
+  try {
+    const headersList = headers();
+    const host = headersList.get('host') || 'localhost';
+    const baseDomain = host.split(':')[0].replace(/^www\./, '');
 
-  // Preland2 (estilo gov.br) não usa CloakerGate
-  if (prelandType === 'preland2') {
+    const tenantsPath = path.join(process.cwd(), 'public', 'tenants.json');
+    const tenantsFile = await fs.readFile(tenantsPath, 'utf-8');
+    const tenantsData = JSON.parse(tenantsFile);
+
+    const config = tenantsData.tenants[baseDomain];
+    return config?.layout || 'a';
+  } catch {
+    return 'a';
+  }
+}
+
+export default async function Home() {
+  const layout = await getTenantLayout();
+
+  // Layout B (estilo gov.br) - sem CloakerGate
+  if (layout === 'b') {
     return (
       <Suspense fallback={<div></div>}>
-        <Preland2 />
+        <LayoutB />
       </Suspense>
     );
   }
 
-  // Preland1 usa CloakerGate
+  // Layout C (safe page Google Ads) - sem CloakerGate
+  if (layout === 'c') {
+    return (
+      <Suspense fallback={<div></div>}>
+        <LayoutC />
+      </Suspense>
+    );
+  }
+
+  // Layout A (padrão) - usa CloakerGate
   return (
     <CloakerGate>
-      <Preland1 />
+      <LayoutA />
     </CloakerGate>
   );
 }
