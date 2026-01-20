@@ -8,25 +8,21 @@ interface TenantConfig {
   googleAdsConversionLabel: string;
 }
 
+declare global {
+  interface Window {
+    __TENANT_CONFIG__?: TenantConfig;
+  }
+}
+
 export default function GoogleAdsScript() {
   const [config, setConfig] = useState<TenantConfig | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    async function fetchTenantConfig() {
-      try {
-        const response = await fetch('/api/tenant');
-        const data = await response.json();
-        
-        if (data.success && data.config && data.config.googleAdsId) {
-          setConfig(data.config);
-        }
-      } catch (error) {
-        // Silencioso - sem config = sem tags
-      }
+    // Lê config injetada server-side (sem fetch visível no network)
+    if (typeof window !== 'undefined' && window.__TENANT_CONFIG__?.googleAdsId) {
+      setConfig(window.__TENANT_CONFIG__);
     }
-
-    fetchTenantConfig();
   }, []);
 
   useEffect(() => {
