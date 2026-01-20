@@ -1,0 +1,20 @@
+{
+  "tenants": {
+    "localhost": {
+      "googleAdsId": "",
+      "googleAdsConversionLabel": ""
+    },
+    "programasocialdigital.click": {
+      "googleAdsId": "",
+      "googleAdsConversionLabel": ""
+    },
+    "cnhbaixarenda.online": {
+      "googleAdsId": "",
+      "googleAdsConversionLabel": ""
+    },
+    "portaodeinformacoes.click": {
+      "googleAdsId": "",
+      "googleAdsConversionLabel": ""
+    }
+  }
+}

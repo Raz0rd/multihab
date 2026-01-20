@@ -1,48 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Configuração dos tenants - cada domínio tem sua própria tag do Google Ads
-const TENANTS: Record<string, {
+// Multi-tenant REAL: Configuração por domínio via arquivo JSON
+// Edite /public/tenants.json para adicionar/alterar tenants SEM rebuild
+
+interface TenantConfig {
   googleAdsId: string;
   googleAdsConversionLabel: string;
-}> = {
-  // Domínio padrão/desenvolvimento
-  'localhost': {
-    googleAdsId: 'AW-17859172217',
-    googleAdsConversionLabel: 'AW-17859172217/AxgvCOr_194bEPmu9cNC',
-  },
-  // Adicione novos domínios aqui:
-  // 'meusite.com.br': {
-  //   googleAdsId: 'AW-XXXXXXXXXX',
-  //   googleAdsConversionLabel: 'AW-XXXXXXXXXX/XXXXXXXXXXX',
-  // },
-  // 'outrosite.com.br': {
-  //   googleAdsId: 'AW-YYYYYYYYYY',
-  //   googleAdsConversionLabel: 'AW-YYYYYYYYYY/YYYYYYYYYYY',
-  // },
-};
+}
 
-// Domínio padrão caso não encontre configuração
-const DEFAULT_TENANT = {
-  googleAdsId: 'AW-17859172217',
-  googleAdsConversionLabel: 'AW-17859172217/AxgvCOr_194bEPmu9cNC',
-};
+interface TenantsFile {
+  tenants: Record<string, TenantConfig>;
+}
+
+// Cache em memória com TTL de 60 segundos
+let tenantsCache: TenantsFile | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60 * 1000; // 60 segundos
+
+async function loadTenants(baseUrl: string): Promise<TenantsFile> {
+  const now = Date.now();
+  
+  // Retorna cache se válido
+  if (tenantsCache && (now - cacheTimestamp) < CACHE_TTL) {
+    return tenantsCache;
+  }
+  
+  // Carrega do arquivo JSON (com cache-busting)
+  const response = await fetch(`${baseUrl}/tenants.json?t=${now}`, {
+    cache: 'no-store'
+  });
+  
+  if (!response.ok) {
+    throw new Error('Falha ao carregar tenants.json');
+  }
+  
+  tenantsCache = await response.json();
+  cacheTimestamp = now;
+  
+  return tenantsCache!;
+}
 
 function extractBaseDomain(host: string): string {
-  // Remove porta se existir
-  const domain = host.split(':')[0];
-  
-  // Remove 'www.' se existir
-  return domain.replace(/^www\./, '');
+  return host.split(':')[0].replace(/^www\./, '');
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Detecta o domínio pelo header Host da requisição
     const host = request.headers.get('host') || 'localhost';
     const baseDomain = extractBaseDomain(host);
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const baseUrl = `${protocol}://${host}`;
     
-    // Busca configuração do tenant pelo domínio
-    const tenantConfig = TENANTS[baseDomain] || DEFAULT_TENANT;
+    const tenantsData = await loadTenants(baseUrl);
+    const tenantConfig = tenantsData.tenants[baseDomain];
+    
+    // Se não houver config para este domínio, retorna null
+    if (!tenantConfig || !tenantConfig.googleAdsId) {
+      return NextResponse.json({
+        success: true,
+        domain: baseDomain,
+        config: null
+      });
+    }
     
     return NextResponse.json({
       success: true,
@@ -53,11 +72,11 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Erro ao detectar tenant:', error);
+    console.error('Erro ao carregar tenant:', error);
     return NextResponse.json({
       success: false,
-      error: 'Erro ao detectar configuração do tenant',
-      config: DEFAULT_TENANT
+      error: 'Erro ao carregar configuração',
+      config: null
     }, { status: 500 });
   }
 }

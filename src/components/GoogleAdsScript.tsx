@@ -18,11 +18,11 @@ export default function GoogleAdsScript() {
         const response = await fetch('/api/tenant');
         const data = await response.json();
         
-        if (data.success && data.config) {
+        if (data.success && data.config && data.config.googleAdsId) {
           setConfig(data.config);
         }
       } catch (error) {
-        console.error('Erro ao carregar configuração do tenant:', error);
+        // Silencioso - sem config = sem tags
       }
     }
 
