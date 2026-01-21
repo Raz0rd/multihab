@@ -24,7 +24,7 @@ async function generateQRCodeImage(text: string): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nome, email, cpf, telefone } = body;
+    const { nome, email, cpf, telefone, utmParams } = body;
 
     // Validação básica
     if (!nome || !cpf) {
@@ -194,13 +194,13 @@ export async function POST(request: NextRequest) {
           priceInCents: valor
         }],
         trackingParameters: {
-          src: null,
-          sck: null,
-          utm_source: null,
-          utm_campaign: null,
-          utm_medium: null,
-          utm_content: null,
-          utm_term: null
+          src: utmParams?.src || null,
+          sck: utmParams?.sck || null,
+          utm_source: utmParams?.utm_source || null,
+          utm_campaign: utmParams?.utm_campaign || null,
+          utm_medium: utmParams?.utm_medium || null,
+          utm_content: utmParams?.utm_content || null,
+          utm_term: utmParams?.utm_term || null
         },
         commission: {
           totalPriceInCents: valor,

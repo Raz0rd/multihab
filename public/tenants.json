@@ -1,22 +1,22 @@
 {
   "tenants": {
     "localhost": {
-      "layout": "a",
+      "layout": "b",
       "googleAdsId": "",
       "googleAdsConversionLabel": ""
     },
     "programasocialdigital.click": {
-      "layout": "a",
-      "googleAdsId": "AW-17859440012",
+      "layout": "b",
+      "googleAdsId": "AW-17859441112",
       "googleAdsConversionLabel": ""
     },
     "cnhbaixarenda.online": {
-      "layout": "a",
+      "layout": "c",
       "googleAdsId": "",
       "googleAdsConversionLabel": ""
     },
     "portaodeinformacoes.click": {
-      "layout": "c",
+      "layout": "b",
       "googleAdsId": "",
       "googleAdsConversionLabel": ""
     }

@@ -26,6 +26,16 @@ export default function ValidacaoBiometricaPage() {
   const transacaoIniciadaRef = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Capturar UTMs do localStorage
+  const getUtmParams = () => {
+    if (typeof window === 'undefined') return {};
+    const savedUtm = localStorage.getItem('utmParams');
+    if (savedUtm) {
+      return JSON.parse(savedUtm);
+    }
+    return {};
+  };
+
   // Verificar se usuário já pagou ao carregar
   useEffect(() => {
     if (typeof window !== 'undefined' && user) {
@@ -148,7 +158,8 @@ export default function ValidacaoBiometricaPage() {
           nome: userBasicData.nome || user?.nome,
           email: userBasicData.email || user?.email,
           cpf: userBasicData.cpf || user?.cpf,
-          telefone: userBasicData.telefone || user?.telefone
+          telefone: userBasicData.telefone || user?.telefone,
+          utmParams: getUtmParams()
         })
       });
 
@@ -193,7 +204,12 @@ export default function ValidacaoBiometricaPage() {
 
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/validacao-biometrica/verificar?transactionId=${txId}`);
+        const utmParams = getUtmParams();
+        const response = await fetch('/api/validacao-biometrica/verificar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactionId: txId, utmParams })
+        });
         const result = await response.json();
 
         if (result.success && result.pago) {
@@ -203,6 +219,11 @@ export default function ValidacaoBiometricaPage() {
           }
           
           setPagamentoConfirmado(true);
+          
+          // Enviar conversão para Google Ads (com proteção contra duplicação)
+          if (typeof window !== 'undefined' && (window as any).gtag_report_conversion) {
+            (window as any).gtag_report_conversion(txId, 14.59);
+          }
           
           // Salvar validação paga no localStorage
           const validacaoPaga = {

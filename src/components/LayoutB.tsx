@@ -27,10 +27,10 @@ export default function LayoutB() {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-6"></div>
-          <p className="text-white/80 text-sm">Carregando...</p>
+          <div className="w-12 h-12 border-4 border-[#1351B4]/20 border-t-[#1351B4] rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-[#1351B4] text-sm font-medium">Carregando...</p>
         </div>
       </div>
     );

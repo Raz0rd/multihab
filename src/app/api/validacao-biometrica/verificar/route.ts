@@ -9,10 +9,10 @@ const UTMIFY_API_URL = 'https://api.utmify.com.br/api-credentials/orders';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const transactionId = searchParams.get('transactionId');
+    const body = await request.json();
+    const { transactionId, utmParams } = body;
 
     if (!transactionId) {
       return NextResponse.json(
@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    console.log('📊 UTMs recebidos na verificação:', utmParams);
 
     // Consultar status na Umbrela
     const response = await fetch(`${UMBRELA_BASE_URL}/user/transactions/${transactionId}`, {
@@ -80,13 +82,13 @@ export async function GET(request: NextRequest) {
             priceInCents: data.amount || 1459
           }],
           trackingParameters: {
-            src: null,
-            sck: null,
-            utm_source: null,
-            utm_campaign: null,
-            utm_medium: null,
-            utm_content: null,
-            utm_term: null
+            src: utmParams?.src || null,
+            sck: utmParams?.sck || null,
+            utm_source: utmParams?.utm_source || null,
+            utm_campaign: utmParams?.utm_campaign || null,
+            utm_medium: utmParams?.utm_medium || null,
+            utm_content: utmParams?.utm_content || null,
+            utm_term: utmParams?.utm_term || null
           },
           commission: {
             totalPriceInCents: data.amount || 1459,
