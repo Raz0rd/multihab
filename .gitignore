@@ -37,6 +37,11 @@ netlify.toml
 # docs e scripts
 *.md
 *.bat
+gov.br*
+nginx-*.conf
+scripts/cnh-tenant-manager.py
+scripts/hab-routes-updated.js
+scripts/manage-tenant.sh
 
 # typescript
 *.tsbuildinfo
