@@ -5,6 +5,77 @@ const UMBRELA_BASE_URL = 'https://api-gateway.umbrellapag.com/api';
 const UTMIFY_API_TOKEN = process.env.UTMIFY_API_TOKEN || '';
 const UTMIFY_API_URL = 'https://api.utmify.com.br/api-credentials/orders';
 
+// Cache em memória para transações já enviadas ao UTMify (evita duplicação)
+const utmifySentCache = new Map<string, { sentAt: Date, success: boolean }>();
+
+// Limpar cache antigo a cada hora
+setInterval(() => {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  Array.from(utmifySentCache.entries()).forEach(([key, value]) => {
+    if (value.sentAt < oneHourAgo) {
+      utmifySentCache.delete(key);
+    }
+  });
+}, 60 * 60 * 1000);
+
+// Função para enviar para UTMify com retry
+async function enviarParaUtmifyComRetry(payload: any, transactionId: string, maxRetries = 3): Promise<boolean> {
+  // Verificar se já enviamos com sucesso
+  const cached = utmifySentCache.get(transactionId);
+  if (cached?.success) {
+    console.log(`⚠️ UTMify: Transação ${transactionId} já enviada anteriormente`);
+    return true;
+  }
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📤 UTMify tentativa ${attempt}/${maxRetries} para ${transactionId}...`);
+      
+      const response = await fetch(UTMIFY_API_URL, {
+        method: 'POST',
+        headers: {
+          'x-api-token': UTMIFY_API_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        console.log(`✅ UTMify: Transação ${transactionId} enviada com sucesso`);
+        utmifySentCache.set(transactionId, { sentAt: new Date(), success: true });
+        return true;
+      }
+
+      const errorText = await response.text();
+      console.error(`❌ UTMify erro (tentativa ${attempt}):`, response.status, errorText);
+      
+      // Se for erro 4xx (exceto 429), não adianta tentar novamente
+      if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+        console.error('⚠️ Erro de cliente, não faz retry');
+        utmifySentCache.set(transactionId, { sentAt: new Date(), success: false });
+        return false;
+      }
+      
+      // Esperar antes de tentar novamente (exponential backoff)
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.log(`⏳ Aguardando ${waitTime}ms antes do retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    } catch (error) {
+      console.error(`❌ UTMify erro de rede (tentativa ${attempt}):`, error);
+      
+      if (attempt < maxRetries) {
+        const waitTime = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  utmifySentCache.set(transactionId, { sentAt: new Date(), success: false });
+  return false;
+}
+
 // Forçar rota dinâmica
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -155,69 +226,60 @@ export async function POST(request: NextRequest) {
     if (result && result.success) {
       const pago = result.pago;
       
-      // Se pago, enviar para UTMify com status paid
+      // Se pago, enviar para UTMify com status paid (com flag de duplicação e retry)
       if (pago) {
+        const rawData = result.data || {};
+        let metadata = {};
         try {
-          const rawData = result.data || {};
-          const metadata = rawData.metadata ? JSON.parse(rawData.metadata) : {};
-          const customer = result.customer || rawData.customer || {};
-          
-          const utmifyPayload = {
-            orderId: result.transactionId,
-            platform: result.gateway === 'umbrela' ? 'Umbrela' : result.gateway === 'nitro' ? 'Nitro' : 'GhostPay',
-            paymentMethod: 'pix',
-            status: 'paid',
-            createdAt: rawData.createdAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
-            approvedDate: result.paidAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
-            refundedAt: null,
-            customer: {
-              name: customer.name || metadata.nome || 'Cliente',
-              email: customer.email || metadata.email || 'cliente@email.com',
-              phone: customer.phone || metadata.telefone || '11999999999',
-              document: customer.document?.number || metadata.cpf || '00000000000',
-              country: 'BR',
-              ip: '0.0.0.0'
-            },
-            products: [{
-              id: result.transactionId,
-              name: metadata.produto || 'Assinatura Premium 002',
-              planId: null,
-              planName: null,
-              quantity: 1,
-              priceInCents: result.amount || 2274
-            }],
-            trackingParameters: {
-              src: utmParams?.src || null,
-              sck: utmParams?.sck || null,
-              utm_source: utmParams?.utm_source || null,
-              utm_campaign: utmParams?.utm_campaign || null,
-              utm_medium: utmParams?.utm_medium || null,
-              utm_content: utmParams?.utm_content || null,
-              utm_term: utmParams?.utm_term || null
-            },
-            commission: {
-              totalPriceInCents: result.amount || 2274,
-              gatewayFeeInCents: 0,
-              userCommissionInCents: result.amount || 2274
-            },
-            isTest: false
-          };
-
-          console.log('📤 Enviando para UTMify (PIX PAGO):', utmifyPayload);
-
-          await fetch(UTMIFY_API_URL, {
-            method: 'POST',
-            headers: {
-              'x-api-token': UTMIFY_API_TOKEN,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(utmifyPayload)
-          });
-
-          console.log('✅ Status PAID enviado para UTMify');
-        } catch (utmifyError) {
-          console.error('⚠️ Erro ao enviar para UTMify:', utmifyError);
+          metadata = rawData.metadata ? JSON.parse(rawData.metadata) : {};
+        } catch (e) {
+          metadata = rawData.metadata || {};
         }
+        const customer = result.customer || rawData.customer || {};
+        
+        const utmifyPayload = {
+          orderId: result.transactionId,
+          platform: result.gateway === 'umbrela' ? 'Umbrela' : result.gateway === 'nitro' ? 'Nitro' : 'GhostPay',
+          paymentMethod: 'pix',
+          status: 'paid',
+          createdAt: rawData.createdAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
+          approvedDate: result.paidAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
+          refundedAt: null,
+          customer: {
+            name: customer.name || (metadata as any).nome || 'Cliente',
+            email: customer.email || (metadata as any).email || 'cliente@email.com',
+            phone: customer.phone || (metadata as any).telefone || '11999999999',
+            document: customer.document?.number || (metadata as any).cpf || '00000000000',
+            country: 'BR',
+            ip: '0.0.0.0'
+          },
+          products: [{
+            id: result.transactionId,
+            name: (metadata as any).produto || 'Assinatura Premium 002',
+            planId: null,
+            planName: null,
+            quantity: 1,
+            priceInCents: result.amount || 2274
+          }],
+          trackingParameters: {
+            src: utmParams?.src || null,
+            sck: utmParams?.sck || null,
+            utm_source: utmParams?.utm_source || null,
+            utm_campaign: utmParams?.utm_campaign || null,
+            utm_medium: utmParams?.utm_medium || null,
+            utm_content: utmParams?.utm_content || null,
+            utm_term: utmParams?.utm_term || null
+          },
+          commission: {
+            totalPriceInCents: result.amount || 2274,
+            gatewayFeeInCents: 0,
+            userCommissionInCents: result.amount || 2274
+          },
+          isTest: false
+        };
+
+        // Enviar com retry e flag de duplicação
+        await enviarParaUtmifyComRetry(utmifyPayload, result.transactionId);
       }
 
       return NextResponse.json({

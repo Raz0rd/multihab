@@ -30,6 +30,9 @@ function PagamentoContent() {
   }>({centavos: 0, formatado: 'R$ 0,00'});
   const transacaoIniciadaRef = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isPollingActiveRef = useRef(false);
+  const lastTransactionIdRef = useRef<string>('');
+  const conversionSentRef = useRef(false);
 
   const categoria = searchParams.get('categoria') || 'B';
 
@@ -202,62 +205,123 @@ function PagamentoContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Função de verificação de pagamento (polling)
+  // Função de verificação única
+  const verificarPagamentoUnico = async (txId: string) => {
+    try {
+      const utmParams = getUtmParams();
+      const response = await fetch('/api/pagamento/verificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: txId, utmParams })
+      });
+      const result = await response.json();
+
+      if (result.success && result.pago && !conversionSentRef.current) {
+        conversionSentRef.current = true;
+        isPollingActiveRef.current = false;
+        
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        
+        setPagamentoConfirmado(true);
+        
+        // Enviar conversão para Google Ads (client-side)
+        if (typeof window !== 'undefined' && (window as any).gtag_report_conversion) {
+          const valorReais = valorPagamento.centavos / 100;
+          (window as any).gtag_report_conversion(txId, valorReais);
+          console.log('✅ Conversão Google Ads enviada:', valorReais);
+        }
+        
+        // Marcar conversão enviada no localStorage para proteção extra
+        localStorage.setItem(`conversion_sent_${txId}`, 'true');
+        localStorage.removeItem('currentTransaction');
+        
+        // Redirecionar para sucesso
+        setTimeout(() => {
+          router.push('/sucesso');
+        }, 2000);
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar pagamento:', error);
+      return false;
+    }
+  };
+
+  // Função de verificação de pagamento (polling com detecção de visibilidade)
   const iniciarVerificacaoPagamento = (txId: string) => {
+    // Verificar se já enviou conversão para este txId
+    if (localStorage.getItem(`conversion_sent_${txId}`)) {
+      console.log('⚠️ Conversão já enviada para esta transação');
+      setPagamentoConfirmado(true);
+      setTimeout(() => router.push('/sucesso'), 1000);
+      return;
+    }
+
     // Limpar polling anterior se existir
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
 
-    const interval = setInterval(async () => {
-      try {
-        // Enviar UTMs junto com a verificação
-        const utmParams = getUtmParams();
-        const response = await fetch('/api/pagamento/verificar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transactionId: txId, utmParams })
-        });
-        const result = await response.json();
+    lastTransactionIdRef.current = txId;
+    isPollingActiveRef.current = true;
+    conversionSentRef.current = false;
 
-        if (result.success && result.pago) {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          
-          setPagamentoConfirmado(true);
-          
-          // Enviar conversão para Google Ads (com proteção contra duplicação)
-          if (typeof window !== 'undefined' && (window as any).gtag_report_conversion) {
-            const valorReais = valorPagamento.centavos / 100;
-            (window as any).gtag_report_conversion(txId, valorReais);
-          }
-          
-          // Limpar localStorage
-          localStorage.removeItem('currentTransaction');
-          
-          // Redirecionar para sucesso
-          setTimeout(() => {
-            router.push('/sucesso');
-          }, 2000);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar pagamento:', error);
-      }
-    }, 5000); // Verifica a cada 5 segundos
+    const executarPolling = () => {
+      if (!isPollingActiveRef.current || conversionSentRef.current) return;
+      verificarPagamentoUnico(txId);
+    };
 
-    pollingIntervalRef.current = interval;
+    // Executar imediatamente
+    executarPolling();
+
+    // Polling a cada 10 segundos
+    pollingIntervalRef.current = setInterval(executarPolling, 10000);
 
     // Parar após 60 minutos
     setTimeout(() => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+        isPollingActiveRef.current = false;
       }
     }, 60 * 60 * 1000);
   };
+
+  // Detectar visibilidade da aba (pausar/retomar polling)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Aba minimizada - pausar polling
+        console.log('⏸️ Aba minimizada - polling pausado');
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      } else {
+        // Aba visível novamente - retomar polling
+        console.log('▶️ Aba visível - retomando polling');
+        if (isPollingActiveRef.current && lastTransactionIdRef.current && !conversionSentRef.current) {
+          // Verificar imediatamente ao voltar
+          verificarPagamentoUnico(lastTransactionIdRef.current);
+          // Reiniciar intervalo
+          pollingIntervalRef.current = setInterval(() => {
+            if (!conversionSentRef.current) {
+              verificarPagamentoUnico(lastTransactionIdRef.current);
+            }
+          }, 10000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const getCategoriaLabel = (cat: string) => {
     if (cat === 'B') return 'Automóvel';

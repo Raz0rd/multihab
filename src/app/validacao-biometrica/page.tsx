@@ -25,6 +25,9 @@ export default function ValidacaoBiometricaPage() {
   
   const transacaoIniciadaRef = useRef(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isPollingActiveRef = useRef(false);
+  const lastTransactionIdRef = useRef<string>('');
+  const conversionSentRef = useRef(false);
 
   // Capturar UTMs do localStorage
   const getUtmParams = () => {
@@ -197,65 +200,126 @@ export default function ValidacaoBiometricaPage() {
     }
   };
 
+  // Função de verificação única
+  const verificarPagamentoUnico = async (txId: string) => {
+    try {
+      const utmParams = getUtmParams();
+      const response = await fetch('/api/validacao-biometrica/verificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: txId, utmParams })
+      });
+      const result = await response.json();
+
+      if (result.success && result.pago && !conversionSentRef.current) {
+        conversionSentRef.current = true;
+        isPollingActiveRef.current = false;
+        
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        
+        setPagamentoConfirmado(true);
+        
+        // Enviar conversão para Google Ads (client-side)
+        if (typeof window !== 'undefined' && (window as any).gtag_report_conversion) {
+          (window as any).gtag_report_conversion(txId, 14.59);
+          console.log('✅ Conversão Google Ads enviada: 14.59');
+        }
+        
+        // Marcar conversão enviada no localStorage
+        localStorage.setItem(`conversion_sent_${txId}`, 'true');
+        
+        // Salvar validação paga no localStorage
+        const validacaoPaga = {
+          cpf: user?.cpf,
+          dataPagamento: new Date().toISOString(),
+          transactionId: txId,
+          valor: 14.59,
+          pago: true
+        };
+        localStorage.setItem('validacaoBiometricaPaga', JSON.stringify(validacaoPaga));
+        localStorage.removeItem('validacaoBiometricaTransaction');
+        
+        // Ir para tela de sucesso
+        setTimeout(() => {
+          setCurrentStep('success');
+        }, 1500);
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar pagamento:', error);
+      return false;
+    }
+  };
+
   const iniciarVerificacaoPagamento = (txId: string) => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
+    // Verificar se já enviou conversão para este txId
+    if (localStorage.getItem(`conversion_sent_${txId}`)) {
+      console.log('⚠️ Conversão já enviada para esta transação');
+      setPagamentoConfirmado(true);
+      setTimeout(() => setCurrentStep('success'), 1000);
+      return;
     }
 
-    const interval = setInterval(async () => {
-      try {
-        const utmParams = getUtmParams();
-        const response = await fetch('/api/validacao-biometrica/verificar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transactionId: txId, utmParams })
-        });
-        const result = await response.json();
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
 
-        if (result.success && result.pago) {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          
-          setPagamentoConfirmado(true);
-          
-          // Enviar conversão para Google Ads (com proteção contra duplicação)
-          if (typeof window !== 'undefined' && (window as any).gtag_report_conversion) {
-            (window as any).gtag_report_conversion(txId, 14.59);
-          }
-          
-          // Salvar validação paga no localStorage
-          const validacaoPaga = {
-            cpf: user?.cpf,
-            dataPagamento: new Date().toISOString(),
-            transactionId: txId,
-            valor: 14.59,
-            pago: true
-          };
-          localStorage.setItem('validacaoBiometricaPaga', JSON.stringify(validacaoPaga));
-          localStorage.removeItem('validacaoBiometricaTransaction');
-          
-          // Ir para tela de sucesso
-          setTimeout(() => {
-            setCurrentStep('success');
-          }, 1500);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar pagamento:', error);
-      }
-    }, 5000);
+    lastTransactionIdRef.current = txId;
+    isPollingActiveRef.current = true;
+    conversionSentRef.current = false;
 
-    pollingIntervalRef.current = interval;
+    const executarPolling = () => {
+      if (!isPollingActiveRef.current || conversionSentRef.current) return;
+      verificarPagamentoUnico(txId);
+    };
+
+    // Executar imediatamente
+    executarPolling();
+
+    // Polling a cada 10 segundos
+    pollingIntervalRef.current = setInterval(executarPolling, 10000);
 
     // Timeout de 1 hora
     setTimeout(() => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
+        isPollingActiveRef.current = false;
       }
     }, 60 * 60 * 1000);
   };
+
+  // Detectar visibilidade da aba (pausar/retomar polling)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('⏸️ Aba minimizada - polling pausado');
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      } else {
+        console.log('▶️ Aba visível - retomando polling');
+        if (isPollingActiveRef.current && lastTransactionIdRef.current && !conversionSentRef.current) {
+          verificarPagamentoUnico(lastTransactionIdRef.current);
+          pollingIntervalRef.current = setInterval(() => {
+            if (!conversionSentRef.current) {
+              verificarPagamentoUnico(lastTransactionIdRef.current);
+            }
+          }, 10000);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   const handleCopiarPix = () => {
     navigator.clipboard.writeText(pixCode);
