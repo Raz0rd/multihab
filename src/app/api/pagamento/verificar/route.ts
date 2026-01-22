@@ -76,6 +76,47 @@ async function verificarUmbrela(transactionId: string) {
   return null;
 }
 
+// Verificar via Nitro Pagamento
+async function verificarNitro(transactionId: string) {
+  const pkKey = process.env.NITRONOVAPKKEY;
+  const skKey = process.env.NITRONOVASKKEY;
+  
+  if (!pkKey || !skKey) {
+    return null;
+  }
+  
+  const authString = Buffer.from(`${pkKey}:${skKey}`).toString('base64');
+  
+  const response = await fetch(`https://api.nitropagamento.app/transactions/${transactionId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!response.ok) return null;
+  
+  const result = await response.json();
+  
+  if (result.success && result.data) {
+    const data = result.data;
+    return {
+      success: true,
+      transactionId: data.id,
+      status: data.status,
+      pago: data.status === 'pago' || data.status === 'paid' || data.status === 'approved',
+      amount: data.amount ? data.amount * 100 : 0,
+      paidAt: data.paid_at || null,
+      gateway: 'nitro',
+      customer: data.customer || null,
+      data: data
+    };
+  }
+  
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -99,14 +140,16 @@ export async function POST(request: NextRequest) {
       result = await verificarUmbrela(transactionId);
     } else if (gateway === 'ghostpay') {
       result = await verificarGhostPay(transactionId);
+    } else if (gateway === 'nitro') {
+      result = await verificarNitro(transactionId);
     }
     
-    // Se não encontrou, tenta no outro gateway
+    // Se não encontrou, tenta nos outros gateways
     if (!result) {
-      console.log(`⚠️ Não encontrado no ${gateway}, tentando outro...`);
-      result = gateway === 'umbrela' 
-        ? await verificarGhostPay(transactionId)
-        : await verificarUmbrela(transactionId);
+      console.log(`⚠️ Não encontrado no ${gateway}, tentando outros...`);
+      if (gateway !== 'ghostpay') result = await verificarGhostPay(transactionId);
+      if (!result && gateway !== 'umbrela') result = await verificarUmbrela(transactionId);
+      if (!result && gateway !== 'nitro') result = await verificarNitro(transactionId);
     }
 
     if (result && result.success) {
@@ -121,7 +164,7 @@ export async function POST(request: NextRequest) {
           
           const utmifyPayload = {
             orderId: result.transactionId,
-            platform: result.gateway === 'umbrela' ? 'Umbrela' : 'GhostPay',
+            platform: result.gateway === 'umbrela' ? 'Umbrela' : result.gateway === 'nitro' ? 'Nitro' : 'GhostPay',
             paymentMethod: 'pix',
             status: 'paid',
             createdAt: rawData.createdAt || new Date().toISOString().replace('T', ' ').substring(0, 19),

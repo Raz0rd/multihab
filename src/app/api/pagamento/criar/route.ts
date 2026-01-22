@@ -186,6 +186,118 @@ async function generatePixUmbrela(body: any) {
   throw new Error('Erro ao criar transação Umbrela')
 }
 
+// Função para gerar PIX via Nitro Pagamento
+async function generatePixNitro(body: any, utmParams?: any) {
+  const pkKey = process.env.NITRONOVAPKKEY
+  const skKey = process.env.NITRONOVASKKEY
+  
+  console.log("\n⚡ [Nitro] Verificando autenticação:")
+  console.log("  PK Key:", pkKey ? "✓ Presente" : "✗ Ausente")
+  console.log("  SK Key:", skKey ? "✓ Presente" : "✗ Ausente")
+  
+  if (!pkKey || !skKey) {
+    console.error("❌ [Nitro] Credenciais não configuradas")
+    throw new Error("NITRONOVAPKKEY e NITRONOVASKKEY são obrigatórios")
+  }
+
+  // Nitro usa valor em reais, não centavos
+  const valorEmReais = body.valor / 100
+  
+  console.log("📤 [Nitro] Gerando PIX - Valor: R$", valorEmReais.toFixed(2))
+
+  const nitroPayload = {
+    amount: valorEmReais,
+    payment_method: 'pix',
+    description: body.produto || 'Assinatura Premium 002',
+    items: [
+      {
+        title: body.produto || 'Assinatura Premium 002',
+        unitPrice: body.valor,
+        quantity: 1,
+        tangible: false
+      }
+    ],
+    customer: {
+      name: body.nome,
+      email: body.email,
+      document: body.cpf,
+      phone: body.telefone
+    },
+    metadata: {
+      nome: body.nome,
+      cpf: body.cpf,
+      email: body.email,
+      telefone: body.telefone,
+      produto: body.produto || 'Assinatura Premium 002',
+      valorEmReais: valorEmReais.toFixed(2),
+      dataTransacao: new Date().toISOString()
+    },
+    postbackUrl: '',
+    tracking: utmParams ? {
+      src: utmParams.src || undefined,
+      utm_source: utmParams.utm_source || undefined,
+      utm_medium: utmParams.utm_medium || undefined,
+      utm_campaign: utmParams.utm_campaign || undefined,
+      utm_term: utmParams.utm_term || undefined,
+      utm_content: utmParams.utm_content || undefined
+    } : undefined
+  }
+  
+  const authString = Buffer.from(`${pkKey}:${skKey}`).toString('base64')
+  
+  console.log("🚀 [Nitro] Enviando requisição para API...")
+  
+  const response = await fetch("https://api.nitropagamento.app", {
+    method: "POST",
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(nitroPayload),
+  })
+
+  console.log("📡 [Nitro] Status:", response.status)
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error("❌ [Nitro] ERROR RESPONSE:", {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    })
+    
+    throw new Error(`Erro na API Nitro: ${response.status}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.success) {
+    console.error("❌ [Nitro] Resposta sem sucesso:", data)
+    throw new Error('Erro ao criar transação Nitro')
+  }
+
+  const transactionId = data.data?.id
+  const pixCode = data.data?.pix_code
+  const qrCodeImage = data.data?.pix_qr_code ? `data:image/png;base64,${data.data.pix_qr_code}` : null
+  
+  console.log("🔍 [Nitro] DADOS EXTRAÍDOS:", {
+    transactionId,
+    pixCode: pixCode ? `${pixCode.substring(0, 50)}...` : null,
+    qrCodeImage: qrCodeImage ? "Presente" : "Ausente",
+    status: data.data?.status
+  })
+
+  return {
+    transactionId,
+    pixCode,
+    qrCode: qrCodeImage || pixCode,
+    success: true,
+    status: data.data?.status,
+    expirationDate: data.data?.expires_at,
+    amount: data.data?.amount ? data.data.amount * 100 : body.valor
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const gateway = process.env.PAYMENT_GATEWAY || 'ghostpay';
@@ -255,6 +367,8 @@ export async function POST(request: NextRequest) {
       result = await generatePixGhostPay(paymentData);
     } else if (gateway === 'umbrela') {
       result = await generatePixUmbrela(paymentData);
+    } else if (gateway === 'nitro') {
+      result = await generatePixNitro(paymentData, utmParams);
     } else {
       // Padrão: GhostPay
       result = await generatePixGhostPay(paymentData);
@@ -265,7 +379,7 @@ export async function POST(request: NextRequest) {
       try {
         const utmifyPayload = {
           orderId: result.transactionId,
-          platform: gateway === 'ghostpay' ? 'GhostPay' : 'Umbrela',
+          platform: gateway === 'ghostpay' ? 'GhostPay' : gateway === 'nitro' ? 'Nitro' : 'Umbrela',
           paymentMethod: 'pix',
           status: 'waiting_payment',
           createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),

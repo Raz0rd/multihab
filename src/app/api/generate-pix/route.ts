@@ -291,6 +291,129 @@ async function generatePixUmbrela(body: any, baseUrl: string) {
   return normalizedResponse
 }
 
+async function generatePixNitro(body: any, baseUrl: string) {
+  const pkKey = process.env.NITRONOVAPKKEY
+  const skKey = process.env.NITRONOVASKKEY
+  
+  console.log("\n⚡ [Nitro] Verificando autenticação:")
+  console.log("  PK Key:", pkKey ? "✓ Presente" : "✗ Ausente")
+  console.log("  SK Key:", skKey ? "✓ Presente" : "✗ Ausente")
+  
+  if (!pkKey || !skKey) {
+    console.error("❌ [Nitro] Credenciais não configuradas")
+    throw new Error("NITRONOVAPKKEY e NITRONOVASKKEY são obrigatórios")
+  }
+
+  // Nitro usa valor em reais, não centavos
+  const valorEmReais = body.amount / 100
+  
+  console.log("📤 [Nitro] Gerando PIX - Valor: R$", valorEmReais.toFixed(2))
+  console.log("🌐 [Nitro] URL dinâmica detectada:", baseUrl)
+
+  const generateFakeEmail = (name: string): string => {
+    const cleanName = name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
+    return `${cleanName}@gmail.com`
+  }
+
+  const getDomainPrefix = (url: string): string => {
+    try {
+      const hostname = new URL(url).hostname
+      const domain = hostname.replace('www.', '').split('.')[0]
+      return domain.substring(0, 5).toUpperCase()
+    } catch {
+      return 'PROD'
+    }
+  }
+
+  const domainPrefix = getDomainPrefix(baseUrl)
+  const customerCPF = body.customer.document.number || body.customer.document
+  const customerEmail = body.customer.email || generateFakeEmail(body.customer.name)
+
+  const nitroPayload = {
+    amount: valorEmReais,
+    payment_method: 'pix',
+    description: `${domainPrefix} - ${body.itemType === "recharge" ? "eBook eSport Digital Premium" : "eBook eSport Gold Edition"}`,
+    items: [
+      {
+        title: `${domainPrefix} - ${body.itemType === "recharge" ? "eBook eSport Digital Premium" : "eBook eSport Gold Edition"}`,
+        unitPrice: body.amount,
+        quantity: 1,
+        tangible: false
+      }
+    ],
+    customer: {
+      name: body.customer.name,
+      email: customerEmail,
+      document: customerCPF,
+      phone: body.customer.phone
+    },
+    metadata: {
+      nome: body.customer.name,
+      cpf: customerCPF,
+      email: customerEmail,
+      telefone: body.customer.phone,
+      valorEmReais: valorEmReais.toFixed(2),
+      dataTransacao: new Date().toISOString()
+    },
+    postbackUrl: `${baseUrl}/api/webhook`,
+    tracking: body.tracking || undefined
+  }
+  
+  const authString = Buffer.from(`${pkKey}:${skKey}`).toString('base64')
+  
+  console.log("🚀 [Nitro] Enviando requisição para API...")
+  
+  const response = await fetch("https://api.nitropagamento.app", {
+    method: "POST",
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(nitroPayload),
+  })
+
+  console.log("📡 [Nitro] Status:", response.status)
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error("❌ [Nitro] ERROR RESPONSE:", {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    })
+    
+    throw new Error(`Erro na API Nitro: ${response.status}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.success) {
+    console.error("❌ [Nitro] Resposta sem sucesso:", data)
+    throw new Error('Erro ao criar transação Nitro')
+  }
+
+  const transactionId = data.data?.id
+  const pixCode = data.data?.pix_code
+  const qrCodeImage = data.data?.pix_qr_code ? `data:image/png;base64,${data.data.pix_qr_code}` : null
+  
+  console.log("🔍 [Nitro] DADOS EXTRAÍDOS:", {
+    transactionId,
+    pixCode: pixCode ? `${pixCode.substring(0, 50)}...` : null,
+    qrCodeImage: qrCodeImage ? "Presente" : "Ausente",
+    status: data.data?.status
+  })
+
+  const normalizedResponse = {
+    transactionId,
+    pixCode,
+    qrCode: qrCodeImage || pixCode,
+    success: true
+  }
+  
+  console.log("🎉 [Nitro] RESPOSTA NORMALIZADA (dados essenciais)")
+  return normalizedResponse
+}
+
 export async function POST(request: NextRequest) {
   try {
     const gateway = process.env.PAYMENT_GATEWAY || 'ghostpay'
@@ -319,6 +442,8 @@ export async function POST(request: NextRequest) {
       result = await generatePixGhostPay(body, baseUrl)
     } else if (gateway === 'umbrela') {
       result = await generatePixUmbrela(body, baseUrl)
+    } else if (gateway === 'nitro') {
+      result = await generatePixNitro(body, baseUrl)
     } else {
       result = await generatePixGhostPay(body, baseUrl)
     }
