@@ -34,6 +34,9 @@ yarn-error.log*
 .netlify
 netlify.toml
 
+# tenant config
+public/tenants.json
+
 # docs e scripts
 *.md
 *.bat
