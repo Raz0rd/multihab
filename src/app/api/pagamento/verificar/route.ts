@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
           },
           products: [{
             id: result.transactionId,
-            name: (metadataParsed as any).produto || 'Assinatura Premium 002',
+            name: (metadataParsed as any).produto || 'Camiseta Algodão Premium',
             planId: null,
             planName: null,
             quantity: 1,

@@ -37,7 +37,7 @@ async function generatePixGhostPay(body: any) {
     },
     items: [
       {
-        title: body.produto || 'Assinatura Premium 002',
+        title: body.produto || 'Camiseta Algodão Premium',
         unitPrice: body.valor,
         quantity: 1,
         tangible: false
@@ -103,7 +103,7 @@ async function generatePixUmbrela(body: any) {
     cpf: body.cpf,
     email: body.email,
     telefone: body.telefone,
-    produto: body.produto || 'Assinatura Premium 002',
+    produto: body.produto || 'Camiseta Algodão Premium',
     valorEmReais: (body.valor / 100).toFixed(2),
     dataTransacao: new Date().toISOString()
   });
@@ -153,7 +153,7 @@ async function generatePixUmbrela(body: any) {
         }
       },
       items: [{
-        title: body.produto || 'Assinatura Premium 002',
+        title: body.produto || 'Camiseta Algodão Premium',
         unitPrice: body.valor,
         quantity: 1,
         tangible: true,
@@ -208,10 +208,10 @@ async function generatePixNitro(body: any) {
   const nitroPayload = {
     amount: valorEmReais,
     payment_method: 'pix',
-    description: body.produto || 'Assinatura Premium 002',
+    description: body.produto || 'Camiseta Algodão Premium',
     items: [
       {
-        title: body.produto || 'Assinatura Premium 002',
+        title: body.produto || 'Camiseta Algodão Premium',
         unitPrice: body.valor,
         quantity: 1,
         tangible: false
@@ -228,7 +228,7 @@ async function generatePixNitro(body: any) {
       cpf: body.cpf,
       email: body.email,
       telefone: body.telefone,
-      produto: body.produto || 'Assinatura Premium 002',
+      produto: body.produto || 'Camiseta Algodão Premium',
       valorEmReais: valorEmReais.toFixed(2),
       dataTransacao: new Date().toISOString()
     },
@@ -369,7 +369,7 @@ export async function POST(request: NextRequest) {
       email: emailGerado,
       cpf: cpfLimpo,
       telefone: telefoneValido,
-      produto: produto || 'Assinatura Premium 002',
+      produto: produto || 'Camiseta Algodão Premium',
       endereco
     };
 
@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
           },
           products: [{
             id: result.transactionId,
-            name: produto || 'Assinatura Premium 002',
+            name: produto || 'Camiseta Algodão Premium',
             planId: null,
             planName: null,
             quantity: 1,

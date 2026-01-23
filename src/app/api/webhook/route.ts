@@ -107,7 +107,7 @@ async function processarGhostPay(body: any) {
     },
     products: [{
       id: transactionId,
-      name: parsedMetadata?.produto || 'Assinatura Premium 002',
+      name: parsedMetadata?.produto || 'Camiseta Algodão Premium',
       planId: null,
       planName: null,
       quantity: 1,
@@ -183,7 +183,7 @@ async function processarUmbrela(body: any) {
     },
     products: [{
       id: transactionId,
-      name: parsedMetadata?.produto || 'Assinatura Premium 002',
+      name: parsedMetadata?.produto || 'Camiseta Algodão Premium',
       planId: null,
       planName: null,
       quantity: 1,
@@ -259,7 +259,7 @@ async function processarNitro(body: any) {
     },
     products: [{
       id: transactionId,
-      name: parsedMetadata?.produto || 'Assinatura Premium 002',
+      name: parsedMetadata?.produto || 'Camiseta Algodão Premium',
       planId: null,
       planName: null,
       quantity: 1,
