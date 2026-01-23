@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 interface TenantConfig {
   googleAdsId: string;
   googleAdsConversionLabel: string;
+  fluxo?: 'a' | 'b';
 }
 
 interface TenantsFile {
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       config: {
         googleAdsId: tenantConfig.googleAdsId,
         googleAdsConversionLabel: tenantConfig.googleAdsConversionLabel,
+        fluxo: tenantConfig.fluxo || 'a',
       }
     });
   } catch (error) {

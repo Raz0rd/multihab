@@ -22,7 +22,7 @@ export default function LayoutA() {
               O maior programa de CNH Social do Brasil já está com inscrições abertas e beneficiará milhões de brasileiros garantindo mobilidade e oportunidades em 2026.
             </p>
             <Link
-              href="/login"
+              href="/inicio"
               className="text-blue inline-block rounded-full bg-white px-6 py-3 text-base font-semibold transition-colors hover:bg-gray-100 md:px-8 md:py-4 md:text-lg"
             >
               Acessar inscrições agora
@@ -32,7 +32,7 @@ export default function LayoutA() {
 
         {/* Banner 1 */}
         <div className="w-full">
-          <Link href="/login">
+          <Link href="/inicio">
             <Image
               src="/banner-promocional-1.png"
               alt="CNH Social 2026 - Conquiste sua liberdade e independência"
@@ -100,7 +100,7 @@ export default function LayoutA() {
               O CNH Social representa uma das maiores iniciativas de inclusão social e mobilidade urbana do Brasil, impactando diretamente a qualidade de vida de milhões de brasileiros.
             </p>
             <Link
-              href="/login"
+              href="/inicio"
               className="text-blue inline-block rounded-full bg-white px-8 py-3 text-lg font-semibold transition-colors hover:bg-gray-100 md:px-10 md:py-4 md:text-xl"
             >
               Começar Inscrição

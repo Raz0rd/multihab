@@ -19,7 +19,7 @@ export default function LayoutB() {
   const handleClick = () => {
     setIsLoading(true);
     const params = searchParams.toString();
-    const url = params ? `/login?${params}` : '/login';
+    const url = params ? `/inicio?${params}` : '/inicio';
     setTimeout(() => {
       router.push(url);
     }, 4000);

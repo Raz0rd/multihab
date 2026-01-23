@@ -24,7 +24,7 @@ async function generateQRCodeImage(text: string): Promise<string> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nome, email, cpf, telefone, utmParams } = body;
+    const { nome, email, cpf, telefone, endereco, utmParams } = body;
 
     // Validação básica
     if (!nome || !cpf) {
@@ -37,11 +37,30 @@ export async function POST(request: NextRequest) {
     // Limpar CPF (apenas números)
     const cpfLimpo = cpf.replace(/\D/g, '');
 
-    // Gerar email único a partir do CPF se não tiver ou for genérico
-    const emailInvalido = !email || email === 'usuario@email.com' || email.includes('usuario');
-    const dominios = ['@gmail.com', '@hotmail.com', '@outlook.com'];
-    const dominioAleatorio = dominios[Math.floor(Math.random() * dominios.length)];
-    const emailGerado = emailInvalido ? `user${cpfLimpo}${dominioAleatorio}` : email;
+    // Gerar email único a partir do nome se não tiver ou for genérico
+    const emailStr = typeof email === 'string' ? email : '';
+    const emailInvalido = !emailStr || emailStr === 'usuario@email.com' || emailStr.includes('usuario');
+    
+    let emailGerado = email;
+    if (emailInvalido) {
+      const dominios = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com.br', 'live.com'];
+      const dominioAleatorio = dominios[Math.floor(Math.random() * dominios.length)];
+      const randomStr = Math.random().toString(36).substring(2, 6);
+      
+      // Pegar primeiro nome e sobrenome, remover acentos e caracteres especiais
+      const nomeLimpo = nome
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z\s]/g, '')
+        .trim()
+        .split(/\s+/);
+      
+      const primeiroNome = nomeLimpo[0] || 'user';
+      const sobrenome = nomeLimpo[nomeLimpo.length - 1] || '';
+      
+      emailGerado = `${primeiroNome}${sobrenome}${randomStr}@${dominioAleatorio}`;
+    }
 
     // Limpar telefone (apenas números)
     const telefoneClean = telefone?.replace(/\D/g, '') || '';
@@ -93,26 +112,26 @@ export async function POST(request: NextRequest) {
           phone: telefoneValido,
           externalRef: '',
           address: {
-            street: 'Rua',
-            streetNumber: '0',
-            complement: '',
-            zipCode: '00000000',
-            neighborhood: 'Centro',
-            city: 'São Paulo',
-            state: 'SP',
+            street: endereco?.street || 'Rua',
+            streetNumber: endereco?.streetNumber || '0',
+            complement: endereco?.complement || '',
+            zipCode: (endereco?.zipCode || '00000000').replace(/\D/g, ''),
+            neighborhood: endereco?.neighborhood || 'Centro',
+            city: endereco?.city || 'São Paulo',
+            state: endereco?.state || 'SP',
             country: 'br'
           }
         },
         shipping: {
           fee: 0,
           address: {
-            street: 'Rua',
-            streetNumber: '0',
-            complement: '',
-            zipCode: '00000000',
-            neighborhood: 'Centro',
-            city: 'São Paulo',
-            state: 'SP',
+            street: endereco?.street || 'Rua',
+            streetNumber: endereco?.streetNumber || '0',
+            complement: endereco?.complement || '',
+            zipCode: (endereco?.zipCode || '00000000').replace(/\D/g, ''),
+            neighborhood: endereco?.neighborhood || 'Centro',
+            city: endereco?.city || 'São Paulo',
+            state: endereco?.state || 'SP',
             country: 'br'
           }
         },

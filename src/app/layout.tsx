@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense } from "react";
 import UtmCapture from "@/components/UtmCapture";
 import GoogleAdsScript from "@/components/GoogleAdsScript";
+import SessionGuard from "@/components/SessionGuard";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -60,7 +61,9 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <UtmCapture />
           </Suspense>
-          {children}
+          <SessionGuard>
+            {children}
+          </SessionGuard>
         </AuthProvider>
       </body>
     </html>

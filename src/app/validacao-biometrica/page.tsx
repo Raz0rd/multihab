@@ -162,6 +162,17 @@ export default function ValidacaoBiometricaPage() {
           email: userBasicData.email || user?.email,
           cpf: userBasicData.cpf || user?.cpf,
           telefone: userBasicData.telefone || user?.telefone,
+          endereco: {
+            ...(userBasicData.enderecoCompleto || {}),
+            street: userBasicData.enderecoCompleto?.street || userBasicData.endereco || 'Rua',
+            streetNumber: userBasicData.enderecoCompleto?.streetNumber || '0',
+            complement: userBasicData.enderecoCompleto?.complement || '',
+            // CEP do fluxo do usuário tem prioridade sobre o da puxada
+            zipCode: (userBasicData.cep || userBasicData.enderecoCompleto?.zipCode || '00000000').replace(/\D/g, ''),
+            neighborhood: userBasicData.enderecoCompleto?.neighborhood || userBasicData.bairro || 'Centro',
+            city: userBasicData.enderecoCompleto?.city || userBasicData.cidade || 'São Paulo',
+            state: userBasicData.enderecoCompleto?.state || userBasicData.uf || 'SP'
+          },
           utmParams: getUtmParams()
         })
       });

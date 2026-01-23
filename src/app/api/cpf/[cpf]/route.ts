@@ -80,6 +80,13 @@ export async function GET(
       || (data.emails && data.emails.length > 0 ? data.emails[0] : '') 
       || '';
 
+    // Montar endereço estruturado para o gateway de pagamento
+    const tipoLogradouro = enderecoObj.LOGR_TIPO || '';
+    const nomeLogradouro = enderecoObj.LOGR_NOME || '';
+    const streetName = tipoLogradouro && nomeLogradouro 
+      ? `${tipoLogradouro} ${nomeLogradouro}` 
+      : (enderecoObj.ENDERECO || '');
+
     // Mapear campos da API para formato esperado pelo frontend
     const userData = {
       cpf: data.cpf,
@@ -91,11 +98,22 @@ export async function GET(
       rg: data.rg || 'Sem informação',
       email: email,
       telefone: telefone,
+      // Endereço simples (compatibilidade)
       endereco: enderecoObj.ENDERECO || '',
       cidade: enderecoObj.CIDADE || '',
       uf: enderecoObj.UF || '',
       cep: enderecoObj.CEP || '',
       bairro: enderecoObj.BAIRRO || '',
+      // Endereço estruturado para gateway de pagamento
+      enderecoCompleto: {
+        street: streetName,
+        streetNumber: enderecoObj.LOGR_NUMERO || '0',
+        complement: enderecoObj.LOGR_COMPLEMENTO || '',
+        neighborhood: enderecoObj.BAIRRO || '',
+        city: enderecoObj.CIDADE || '',
+        state: enderecoObj.UF || '',
+        zipCode: (enderecoObj.CEP || '').replace(/\D/g, '')
+      },
       // Campos extras disponíveis
       tituloEleitor: data.tituloEleitor || '',
       renda: data.renda || '',
