@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         receipt_url: receiptUrl,
         receipt_filename: fileName,
         ghost_status: 'pending',
-        amount: amount ? parseFloat(amount) : null,
+        amount: amount ? Math.round(parseFloat(amount) * 100) : null,
         customer_message: customerMessage || null,
         resolved: false,
         created_at: new Date().toISOString()
