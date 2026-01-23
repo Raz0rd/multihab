@@ -139,13 +139,15 @@ function PagamentoContent() {
         const result = await response.json();
 
         if (result.success) {
-          setPixCode(result.qrCode);
+          // Usar pixCode para copia e cola (Nitro), senão qrCode
+          setPixCode(result.pixCode || result.qrCode);
           setTransactionId(result.transactionId);
           
           // Salvar no localStorage para não perder ao recarregar
           localStorage.setItem('currentTransaction', JSON.stringify({
             transactionId: result.transactionId,
             qrCode: result.qrCode,
+            pixCode: result.pixCode || result.qrCode,
             valorCentavos: valorData.valorCentavos,
             valorFormatado: valorData.valorFormatado,
             taxas: valorData.taxas

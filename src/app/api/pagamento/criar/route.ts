@@ -459,6 +459,7 @@ export async function POST(request: NextRequest) {
         success: true,
         transactionId: result.transactionId,
         qrCode: result.qrCode || result.pixCode,
+        pixCode: result.pixCode,
         status: result.status || 'pending',
         expirationDate: result.expirationDate,
         amount: result.amount || valor

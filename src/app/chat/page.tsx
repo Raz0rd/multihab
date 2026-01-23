@@ -234,7 +234,7 @@ export default function ChatPage() {
       const data = JSON.parse(savedTransaction);
       if (data.transactionId && !localStorage.getItem(`conversion_sent_${data.transactionId}`)) {
         setTransactionId(data.transactionId);
-        setPixCode(data.qrCode || '');
+        setPixCode(data.pixCode || data.qrCode || '');
         setValorCentavos(data.valorCentavos || 0);
         if (data.taxas) {
           setTaxas({
@@ -456,17 +456,20 @@ export default function ChatPage() {
       });
 
       const data = await response.json();
-      if (data.success && data.qrCode) {
-        setPixCode(data.qrCode);
+      if (data.success && (data.qrCode || data.pixCode)) {
+        // Usar pixCode para copia e cola (Nitro), senão qrCode
+        const codigoPix = data.pixCode || data.qrCode;
+        setPixCode(codigoPix);
         setTransactionId(data.transactionId || '');
         setValorCentavos(valorEmCentavos);
-        const qrUrl = await QRCode.toDataURL(data.qrCode, { width: 200, margin: 2 });
+        const qrUrl = await QRCode.toDataURL(codigoPix, { width: 200, margin: 2 });
         setQrCodeUrl(qrUrl);
         
         // Salvar no localStorage para não perder ao recarregar
         localStorage.setItem('currentTransactionChat', JSON.stringify({
           transactionId: data.transactionId,
           qrCode: data.qrCode,
+          pixCode: codigoPix,
           valorCentavos: valorEmCentavos,
           taxas: {
             ted: Math.round(taxas.ted * 100),
