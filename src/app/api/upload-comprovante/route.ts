@@ -8,6 +8,9 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const cpf = formData.get('cpf') as string;
     const renach = formData.get('renach') as string;
+    const paymentId = formData.get('paymentId') as string;
+    const amount = formData.get('amount') as string;
+    const customerMessage = formData.get('customerMessage') as string;
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'Arquivo não enviado' }, { status: 400 });
@@ -68,8 +71,38 @@ export async function POST(request: NextRequest) {
     
     console.log(`✅ Comprovante salvo: CPF ${cpfLimpo} | RENACH ${renach || 'N/A'}`);
 
-    // Não retornar URL do Supabase para o frontend
-    // Salvar apenas referência interna
+    // Gerar URL do arquivo no bucket
+    const receiptUrl = `${supabaseUrl}/storage/v1/object/receipts/${fileName}`;
+
+    // Salvar registro na tabela payment_receipts
+    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/payment_receipts`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseToken}`,
+        'apikey': supabaseToken,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        payment_id: paymentId || null,
+        receipt_url: receiptUrl,
+        receipt_filename: fileName,
+        ghost_status: 'pending',
+        amount: amount ? parseFloat(amount) : null,
+        customer_message: customerMessage || null,
+        resolved: false,
+        created_at: new Date().toISOString()
+      })
+    });
+
+    if (!insertResponse.ok) {
+      const insertError = await insertResponse.text();
+      console.error('❌ Erro ao salvar na tabela:', insertError);
+      // Não falha o upload, apenas loga o erro
+    } else {
+      console.log(`📝 Registro salvo na tabela payment_receipts`);
+    }
+
     return NextResponse.json({
       success: true,
       fileId: fileName,

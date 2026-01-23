@@ -478,6 +478,8 @@ export default function ChatPage() {
             tpe: Math.round(taxas.tpe * 100)
           }
         }));
+        // Salvar valor para o upload do comprovante
+        localStorage.setItem('paymentAmount', String(valorEmCentavos / 100));
         
         // Iniciar polling de verificação
         iniciarVerificacaoPagamento(data.transactionId);
@@ -746,6 +748,9 @@ export default function ChatPage() {
       formData.append('file', arquivoOtimizado, selectedFile.name);
       formData.append('cpf', userCpf);
       formData.append('renach', renach);
+      formData.append('paymentId', transactionId || '');
+      formData.append('amount', localStorage.getItem('paymentAmount') || '');
+      formData.append('customerMessage', '');
       
       const response = await fetch('/api/upload-comprovante', {
         method: 'POST',
