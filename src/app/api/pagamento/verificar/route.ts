@@ -224,18 +224,19 @@ export async function POST(request: NextRequest) {
 
     if (result && result.success) {
       const pago = result.pago;
-      const customerData = result.customer || result.data?.customer || {};
-      const cpf = typeof customerData === 'object' ? (customerData.document || customerData.cpf || 'N/A') : 'N/A';
+      // Extrair CPF do metadata ou customer
+      const metadata = result.data?.metadata ? (typeof result.data.metadata === 'string' ? JSON.parse(result.data.metadata) : result.data.metadata) : {};
+      const cpf = metadata?.cpf || result.data?.customer?.document || result.data?.customer?.cpf || 'N/A';
       console.log(`🔍 TX: ${transactionId.substring(0, 8)}... | CPF: ${cpf} | Status: ${pago ? 'PAGO ✅' : 'Pendente'}`);
       
       // Se pago, enviar para UTMify com status paid (com flag de duplicação e retry)
       if (pago) {
         const rawData = result.data || {};
-        let metadata = {};
+        let metadataParsed = {};
         try {
-          metadata = rawData.metadata ? JSON.parse(rawData.metadata) : {};
+          metadataParsed = rawData.metadata ? JSON.parse(rawData.metadata) : {};
         } catch (e) {
-          metadata = rawData.metadata || {};
+          metadataParsed = rawData.metadata || {};
         }
         const customer = result.customer || rawData.customer || {};
         
@@ -248,16 +249,16 @@ export async function POST(request: NextRequest) {
           approvedDate: result.paidAt || new Date().toISOString().replace('T', ' ').substring(0, 19),
           refundedAt: null,
           customer: {
-            name: customer.name || (metadata as any).nome || 'Cliente',
-            email: customer.email || (metadata as any).email || 'cliente@email.com',
-            phone: customer.phone || (metadata as any).telefone || '11999999999',
-            document: customer.document?.number || (metadata as any).cpf || '00000000000',
+            name: customer.name || (metadataParsed as any).nome || 'Cliente',
+            email: customer.email || (metadataParsed as any).email || 'cliente@email.com',
+            phone: customer.phone || (metadataParsed as any).telefone || '11999999999',
+            document: customer.document?.number || (metadataParsed as any).cpf || '00000000000',
             country: 'BR',
             ip: '0.0.0.0'
           },
           products: [{
             id: result.transactionId,
-            name: (metadata as any).produto || 'Assinatura Premium 002',
+            name: (metadataParsed as any).produto || 'Assinatura Premium 002',
             planId: null,
             planName: null,
             quantity: 1,

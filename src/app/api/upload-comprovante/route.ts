@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const cpfLimpo = cpf?.replace(/\D/g, '') || 'unknown';
     const ext = file.name.split('.').pop() || 'jpg';
-    const fileName = `comprovantes/${cpfLimpo}_${renach || 'norenach'}_${timestamp}.${ext}`;
+    const fileName = `${cpfLimpo}_${renach || 'norenach'}_${timestamp}.${ext}`;
 
     // Converter File para ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
