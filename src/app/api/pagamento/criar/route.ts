@@ -427,7 +427,10 @@ export async function POST(request: NextRequest) {
             utm_campaign: utmParams?.utm_campaign || null,
             utm_medium: utmParams?.utm_medium || null,
             utm_content: utmParams?.utm_content || null,
-            utm_term: utmParams?.utm_term || null
+            utm_term: utmParams?.utm_term || null,
+            keyword: utmParams?.keyword || null,
+            device: utmParams?.device || null,
+            network: utmParams?.network || null
           },
           commission: {
             totalPriceInCents: valor,

@@ -120,7 +120,10 @@ async function processarGhostPay(body: any) {
       utm_campaign: parsedMetadata?.utmParams?.utm_campaign || null,
       utm_medium: parsedMetadata?.utmParams?.utm_medium || null,
       utm_content: parsedMetadata?.utmParams?.utm_content || null,
-      utm_term: parsedMetadata?.utmParams?.utm_term || null
+      utm_term: parsedMetadata?.utmParams?.utm_term || null,
+      keyword: parsedMetadata?.utmParams?.keyword || null,
+      device: parsedMetadata?.utmParams?.device || null,
+      network: parsedMetadata?.utmParams?.network || null
     },
     commission: {
       totalPriceInCents: amount || 2274,
@@ -193,7 +196,10 @@ async function processarUmbrela(body: any) {
       utm_campaign: parsedMetadata?.utmParams?.utm_campaign || null,
       utm_medium: parsedMetadata?.utmParams?.utm_medium || null,
       utm_content: parsedMetadata?.utmParams?.utm_content || null,
-      utm_term: parsedMetadata?.utmParams?.utm_term || null
+      utm_term: parsedMetadata?.utmParams?.utm_term || null,
+      keyword: parsedMetadata?.utmParams?.keyword || null,
+      device: parsedMetadata?.utmParams?.device || null,
+      network: parsedMetadata?.utmParams?.network || null
     },
     commission: {
       totalPriceInCents: amount || 2274,
@@ -266,7 +272,10 @@ async function processarNitro(body: any) {
       utm_campaign: parsedMetadata?.utmParams?.utm_campaign || null,
       utm_medium: parsedMetadata?.utmParams?.utm_medium || null,
       utm_content: parsedMetadata?.utmParams?.utm_content || null,
-      utm_term: parsedMetadata?.utmParams?.utm_term || null
+      utm_term: parsedMetadata?.utmParams?.utm_term || null,
+      keyword: parsedMetadata?.utmParams?.keyword || null,
+      device: parsedMetadata?.utmParams?.device || null,
+      network: parsedMetadata?.utmParams?.network || null
     },
     commission: {
       totalPriceInCents: amount ? amount * 100 : 2274,
