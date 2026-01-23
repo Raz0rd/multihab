@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2, Upload, Check, Copy } from 'lucide-react';
 import QRCode from 'qrcode';
+import { getDetranLogo } from '@/utils/detranLogos';
 
 interface Message {
   id: number;
@@ -864,7 +865,7 @@ export default function ChatPage() {
                   <div className="my-4 max-w-md mx-auto">
                     <div className="bg-white border border-gray-300 rounded shadow-md text-xs">
                       <div className="bg-gray-50 p-2 border-b border-gray-200 flex items-center justify-between">
-                        <Image src="/detran-logo.png" alt={`DETRAN ${detranSigla}`} width={100} height={32} className="h-8 object-contain" />
+                        <Image src={getDetranLogo(detranSigla)} alt={`DETRAN ${detranSigla}`} width={100} height={32} className="h-8 object-contain" />
                         <span className="text-gray-500 text-xs">Protocolo: {protocolo}</span>
                       </div>
                       <div className="p-3">
@@ -915,7 +916,7 @@ export default function ChatPage() {
                     <div className="bg-white border border-gray-300 rounded shadow-md">
                       <div className="text-center py-4 border-b">
                         <div className="flex justify-center mb-2">
-                          <Image src="/detran-logo-full.png" alt="DETRAN" width={80} height={60} />
+                          <Image src={getDetranLogo(detranSigla)} alt={`DETRAN ${detranSigla}`} width={80} height={60} className="object-contain" />
                         </div>
                         <p className="font-bold text-gray-800">DETRAN.{detranSigla}</p>
                         <p className="text-xs text-gray-500">Departamento Estadual de Trânsito</p>
