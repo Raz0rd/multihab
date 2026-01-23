@@ -762,17 +762,47 @@ export default function ChatPage() {
           comprovanteUploadedAt: data.uploadedAt
         }));
         
-        setIsPaid(true);
-        router.push('/sucesso-b');
+        // Aguardar confirmação do pagamento no gateway antes de redirecionar
+        if (transactionId) {
+          addBotMessage('Comprovante recebido! Aguardando confirmação do pagamento...');
+          
+          // Polling para verificar status do pagamento (máx 60 tentativas = 5 min)
+          for (let i = 0; i < 60; i++) {
+            try {
+              const verifyRes = await fetch('/api/pagamento/verificar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transactionId, utmParams: getUtmParams() })
+              });
+              const verifyData = await verifyRes.json();
+              
+              if (verifyData.pago) {
+                setIsPaid(true);
+                router.push('/sucesso-b');
+                return;
+              }
+            } catch (err) {
+              console.error('Erro na verificação:', err);
+            }
+            
+            // Aguardar 5 segundos entre verificações
+            await new Promise(r => setTimeout(r, 5000));
+          }
+          
+          // Timeout - pagamento não confirmado após 5 min
+          addBotMessage('O pagamento ainda não foi confirmado. Por favor, aguarde alguns minutos e tente novamente.');
+        } else {
+          // Sem transactionId, redireciona direto
+          setIsPaid(true);
+          router.push('/sucesso-b');
+        }
       } else {
         console.error('Erro no upload:', data.error);
-        setIsPaid(true);
-        router.push('/sucesso-b');
+        addBotMessage('Erro ao enviar comprovante. Tente novamente.');
       }
     } catch (error) {
       console.error('Erro ao enviar comprovante:', error);
-      setIsPaid(true);
-      router.push('/sucesso-b');
+      addBotMessage('Erro ao enviar comprovante. Tente novamente.');
     } finally {
       setIsLoadingPix(false);
     }
