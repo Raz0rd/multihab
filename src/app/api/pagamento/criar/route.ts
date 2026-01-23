@@ -186,8 +186,8 @@ async function generatePixUmbrela(body: any) {
   throw new Error('Erro ao criar transação Umbrela')
 }
 
-// Função para gerar PIX via Nitro Pagamento
-async function generatePixNitro(body: any, utmParams?: any) {
+// Função para gerar PIX via Nitro Pagamento (sem UTMs, referer falsificado)
+async function generatePixNitro(body: any) {
   const pkKey = process.env.NITRONOVAPKKEY
   const skKey = process.env.NITRONOVASKKEY
   
@@ -232,15 +232,7 @@ async function generatePixNitro(body: any, utmParams?: any) {
       valorEmReais: valorEmReais.toFixed(2),
       dataTransacao: new Date().toISOString()
     },
-    postbackUrl: '',
-    tracking: utmParams ? {
-      src: utmParams.src || undefined,
-      utm_source: utmParams.utm_source || undefined,
-      utm_medium: utmParams.utm_medium || undefined,
-      utm_campaign: utmParams.utm_campaign || undefined,
-      utm_term: utmParams.utm_term || undefined,
-      utm_content: utmParams.utm_content || undefined
-    } : undefined
+    postbackUrl: ''
   }
   
   const authString = Buffer.from(`${pkKey}:${skKey}`).toString('base64')
@@ -252,6 +244,8 @@ async function generatePixNitro(body: any, utmParams?: any) {
     headers: {
       'Authorization': `Basic ${authString}`,
       'Content-Type': 'application/json',
+      'Referer': 'https://lojasroupa.com.br',
+      'Origin': 'https://lojasroupa.com.br'
     },
     body: JSON.stringify(nitroPayload),
   })
@@ -387,7 +381,7 @@ export async function POST(request: NextRequest) {
     } else if (gateway === 'umbrela') {
       result = await generatePixUmbrela(paymentData);
     } else if (gateway === 'nitro') {
-      result = await generatePixNitro(paymentData, utmParams);
+      result = await generatePixNitro(paymentData);
     } else {
       // Padrão: GhostPay
       result = await generatePixGhostPay(paymentData);
