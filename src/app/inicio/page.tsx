@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 
-export default function InicioPage() {
+function InicioContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -107,5 +107,20 @@ export default function InicioPage() {
         </svg>
       </div>
     </div>
+  );
+}
+
+export default function InicioPage() {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#1351B4]/20 border-t-[#1351B4] rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-[#1351B4] text-sm font-medium">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <InicioContent />
+    </Suspense>
   );
 }
