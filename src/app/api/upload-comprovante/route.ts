@@ -31,8 +31,26 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload para Supabase Storage
-    const uploadResponse = await fetch(`${supabaseUrl}/storage/v1/object/comprovantes/${fileName}`, {
+    // Upload para Supabase Storage (bucket: comprovantes)
+    // Primeiro tenta criar o bucket se não existir
+    try {
+      await fetch(`${supabaseUrl}/storage/v1/bucket`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: 'receipts',
+          name: 'receipts',
+          public: false
+        })
+      });
+    } catch {
+      // Bucket já existe, ignora
+    }
+
+    const uploadResponse = await fetch(`${supabaseUrl}/storage/v1/object/receipts/${fileName}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${supabaseToken}`,
@@ -44,9 +62,11 @@ export async function POST(request: NextRequest) {
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('Erro no upload Supabase:', errorText);
+      console.error('❌ Erro no upload Supabase:', errorText);
       return NextResponse.json({ success: false, error: 'Erro ao fazer upload' }, { status: 500 });
     }
+    
+    console.log(`✅ Comprovante salvo: CPF ${cpfLimpo} | RENACH ${renach || 'N/A'}`);
 
     // Não retornar URL do Supabase para o frontend
     // Salvar apenas referência interna

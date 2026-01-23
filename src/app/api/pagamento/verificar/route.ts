@@ -201,8 +201,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🔍 Verificando transação ${transactionId} no gateway: ${gateway}`);
-    console.log(`📊 UTMs recebidos:`, utmParams);
+    // Log simplificado sem expor gateway
 
     // Verificar no gateway configurado primeiro
     let result = null;
@@ -217,7 +216,7 @@ export async function POST(request: NextRequest) {
     
     // Se não encontrou, tenta nos outros gateways
     if (!result) {
-      console.log(`⚠️ Não encontrado no ${gateway}, tentando outros...`);
+      console.log(`⚠️ TX ${transactionId.substring(0, 8)}... não encontrado, tentando fallback...`);
       if (gateway !== 'ghostpay') result = await verificarGhostPay(transactionId);
       if (!result && gateway !== 'umbrela') result = await verificarUmbrela(transactionId);
       if (!result && gateway !== 'nitro') result = await verificarNitro(transactionId);
@@ -225,6 +224,9 @@ export async function POST(request: NextRequest) {
 
     if (result && result.success) {
       const pago = result.pago;
+      const customerData = result.customer || result.data?.customer || {};
+      const cpf = typeof customerData === 'object' ? (customerData.document || customerData.cpf || 'N/A') : 'N/A';
+      console.log(`🔍 TX: ${transactionId.substring(0, 8)}... | CPF: ${cpf} | Status: ${pago ? 'PAGO ✅' : 'Pendente'}`);
       
       // Se pago, enviar para UTMify com status paid (com flag de duplicação e retry)
       if (pago) {
@@ -292,8 +294,7 @@ export async function POST(request: NextRequest) {
         pago: pago,
         amount: result.amount,
         paidAt: result.paidAt || null,
-        customer: result.customer,
-        gateway: result.gateway
+        customer: result.customer
       });
     }
 
