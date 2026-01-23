@@ -15,6 +15,7 @@ function PagamentoContent() {
   const [timeLeft, setTimeLeft] = useState(60 * 60); // 60 minutos em segundos
   const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
   const [pixCode, setPixCode] = useState('');
+  const [qrCodeImage, setQrCodeImage] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -139,8 +140,10 @@ function PagamentoContent() {
         const result = await response.json();
 
         if (result.success) {
-          // Usar pixCode para copia e cola (Nitro), senão qrCode
+          // pixCode = código PIX para copia e cola
+          // qrCode = imagem base64 do QR Code
           setPixCode(result.pixCode || result.qrCode);
+          setQrCodeImage(result.qrCode);
           setTransactionId(result.transactionId);
           
           // Salvar no localStorage para não perder ao recarregar
@@ -515,8 +518,20 @@ function PagamentoContent() {
             </p>
           </div>
 
+          {/* Imagem QR Code */}
+          {qrCodeImage && qrCodeImage.startsWith('data:image') && (
+            <div className="mt-6 flex justify-center">
+              <img 
+                src={qrCodeImage} 
+                alt="QR Code PIX" 
+                className="h-48 w-48 rounded-lg border border-gray-200"
+              />
+            </div>
+          )}
+
           {/* Código PIX Copia e Cola */}
           <div className="mt-6">
+            <p className="mb-2 text-center text-sm font-medium text-gray-600">Ou copie o código PIX:</p>
             <div className="mb-2 rounded-md bg-gray-100 p-3">
               <p className="break-all text-xs text-gray-700">{pixCode}</p>
             </div>
