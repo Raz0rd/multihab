@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function LayoutC() {
@@ -8,13 +8,16 @@ export default function LayoutC() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const nextUrl = useMemo(() => {
+    const params = searchParams.toString();
+    return params ? `/inicio?${params}` : '/inicio';
+  }, [searchParams]);
+
   const handleClick = () => {
     setIsLoading(true);
-    const params = searchParams.toString();
-    const url = params ? `/login?${params}` : '/login';
     setTimeout(() => {
-      router.push(url);
-    }, 4000);
+      router.push(nextUrl);
+    }, 900);
   };
 
   if (isLoading) {
@@ -29,84 +32,84 @@ export default function LayoutC() {
   }
 
   return (
-    <div style={{ 
-      margin: 0, 
-      padding: 0, 
-      fontFamily: 'Arial, Helvetica, sans-serif',
-      background: '#f4f7fb',
-      color: '#0a2a5c',
-      minHeight: '100vh'
-    }}>
-      <div style={{
-        maxWidth: '900px',
-        margin: '0 auto',
-        padding: '40px 20px',
-        textAlign: 'center'
-      }}>
-        <h1 style={{
-          fontSize: '42px',
-          fontWeight: 700,
-          marginBottom: '15px',
-          color: '#0a3d91'
-        }}>
-          CNH SOCIAL DIGITAL
-        </h1>
-        
-        <h2 style={{
-          fontSize: '26px',
-          marginBottom: '30px',
-          fontWeight: 600
-        }}>
-          2025: A oportunidade de realizar o seu sonho
-        </h2>
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-[#0a3d91]" />
+            <div className="leading-tight">
+              <div className="text-sm font-semibold text-slate-900">Portal informativo</div>
+              <div className="text-xs text-slate-600">CNH Social Digital</div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500">Acesso rápido</div>
+        </header>
 
-        <p style={{
-          fontSize: '20px',
-          marginBottom: '40px',
-          fontWeight: 500
-        }}>
-          Informações sobre iniciativas de habilitação social no Brasil
-        </p>
+        <main className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-12">
+          <section className="lg:col-span-7">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Informações e orientações sobre habilitação social
+            </h1>
+            <p className="mt-4 text-base leading-7 text-slate-700">
+              Nesta página você encontra um resumo informativo e acesso à próxima etapa.
+              Ao continuar, você será direcionado para a área de autenticação.
+            </p>
 
-        <button
-          onClick={handleClick}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#0a3d91',
-            color: '#ffffff',
-            textDecoration: 'none',
-            padding: '18px 40px',
-            fontSize: '20px',
-            fontWeight: 600,
-            borderRadius: '10px',
-            border: 'none',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 8px 20px rgba(10, 61, 145, 0.25)'
-          }}
-        >
-          Acessar informações
-        </button>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                onClick={handleClick}
+                className="inline-flex items-center justify-center rounded-xl bg-[#0a3d91] px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-[#08357f] focus:outline-none focus:ring-2 focus:ring-[#0a3d91]/40"
+              >
+                Continuar
+              </button>
+              <div className="text-sm text-slate-600">
+                Próximo passo: <span className="font-medium">/inicio</span>
+              </div>
+            </div>
 
-        <p style={{
-          marginTop: '20px',
-          fontSize: '14px',
-          color: '#555'
-        }}>
-          Ao clicar, você será direcionado para a página de cadastro.
-        </p>
+            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="text-sm font-semibold text-slate-900">O que você vai encontrar</div>
+                <div className="mt-2 text-sm text-slate-600">
+                  Requisitos, etapas e orientações gerais para seguir com o processo.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="text-sm font-semibold text-slate-900">Tempo estimado</div>
+                <div className="mt-2 text-sm text-slate-600">
+                  Menos de 1 minuto para avançar para a próxima página.
+                </div>
+              </div>
+            </div>
+          </section>
 
-        <footer style={{
-          marginTop: '80px',
-          fontSize: '14px',
-          color: '#555',
-          lineHeight: 1.6
-        }}>
-          <p>
-            Este site tem caráter informativo e direciona o usuário para uma página de cadastro.
-          </p>
+          <aside className="lg:col-span-5">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+              <div className="text-sm font-semibold text-slate-900">Resumo</div>
+              <div className="mt-3 space-y-3 text-sm text-slate-700">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-[#0a3d91]" />
+                  <div>Conteúdo com caráter informativo.</div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-[#0a3d91]" />
+                  <div>Continue para acessar a próxima etapa do fluxo.</div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 h-2 w-2 rounded-full bg-[#0a3d91]" />
+                  <div>Parâmetros de URL são mantidos ao avançar.</div>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600">
+                Ao clicar em <span className="font-semibold">Continuar</span>, você será direcionado automaticamente.
+              </div>
+            </div>
+          </aside>
+        </main>
+
+        <footer className="mt-12 border-t border-slate-200 pt-6 text-xs text-slate-500">
+          Este site tem caráter informativo e direciona o usuário para a próxima etapa do fluxo.
         </footer>
       </div>
     </div>

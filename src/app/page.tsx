@@ -6,6 +6,7 @@ import CloakerGate from '@/components/CloakerGate';
 import LayoutA from '@/components/LayoutA';
 import LayoutB from '@/components/LayoutB';
 import LayoutC from '@/components/LayoutC';
+import LayoutD from '@/components/LayoutD';
 
 async function getTenantLayout() {
   try {
@@ -41,6 +42,15 @@ export default async function Home() {
     return (
       <Suspense fallback={<div></div>}>
         <LayoutC />
+      </Suspense>
+    );
+  }
+
+  // Layout D (HTML via tenants.json) - sem CloakerGate
+  if (layout === 'd') {
+    return (
+      <Suspense fallback={<div></div>}>
+        <LayoutD />
       </Suspense>
     );
   }
